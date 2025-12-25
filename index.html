@@ -37,12 +37,11 @@
             z-index: 10;
             transform-origin: center center;
             pointer-events: none; 
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.1s; /* Removed box-shadow transition for instant slider response */
         }
 
-        /* Feather Effect */
+        /* Feather Effect (Dynamic via JS now) */
         .feathered {
-            box-shadow: 0 0 15px 15px var(--box-color);
             border: none !important; 
         }
 
@@ -54,27 +53,22 @@
             border: 2px solid #2563eb !important;
         }
 
-        /* --- FIXED SLIDER CSS --- */
-        /* The track */
+        /* --- SLIDER CSS --- */
         input[type=range] {
-            -webkit-appearance: none; /* Hides default slider */
+            -webkit-appearance: none;
             width: 100%; 
             background: transparent; 
         }
-
-        /* The Thumb (Handle) for Chrome/Safari/Edge */
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 28px;
-            width: 28px;
+            height: 24px;
+            width: 24px;
             border-radius: 50%;
             background: #2563eb;
             cursor: pointer;
-            margin-top: -10px; /* Pulls thumb up to center on track */
+            margin-top: -8px; 
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
-
-        /* The Track for Chrome/Safari/Edge */
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
             height: 8px;
@@ -82,16 +76,13 @@
             background: #e5e7eb;
             border-radius: 5px;
         }
-        
-        /* Firefox Support */
         input[type=range]::-moz-range-thumb {
-            height: 28px;
-            width: 28px;
+            height: 24px;
+            width: 24px;
             border: none;
             border-radius: 50%;
             background: #2563eb;
             cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
         input[type=range]::-moz-range-track {
             width: 100%;
@@ -156,13 +147,18 @@
                         </div>
                     </div>
                     
-                    <div class="flex flex-col items-center justify-center border-l">
-                         <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Edge Style</p>
-                         <label class="inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="featherToggle" class="sr-only peer">
-                            <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            <span class="ms-3 text-sm font-medium text-gray-700">Feather</span>
-                          </label>
+                    <div class="flex flex-col gap-2 border-l pl-2">
+                        <div class="flex items-center justify-center">
+                             <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="featherToggle" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                <span class="ms-2 text-xs font-bold text-gray-400 uppercase">Feather</span>
+                              </label>
+                        </div>
+                        <div id="strengthContainer" class="opacity-50 pointer-events-none transition-opacity">
+                            <input type="range" id="featherStrength" min="5" max="50" value="20">
+                            <p class="text-[10px] text-center text-gray-400 uppercase">Strength</p>
+                        </div>
                     </div>
                 </div>
 
@@ -235,6 +231,7 @@
         let box = { x: 20, y: 20, w: 100, h: 40 };
         let rotation = 0; 
         let isFeather = false; 
+        let featherVal = 20; // Default strength
 
         // DOM ELEMENTS
         const fileInput = document.getElementById('fileInput');
@@ -247,6 +244,8 @@
         const angleSlider = document.getElementById('angleSlider');
         const angleDisplay = document.getElementById('angleDisplay');
         const featherToggle = document.getElementById('featherToggle');
+        const featherStrength = document.getElementById('featherStrength');
+        const strengthContainer = document.getElementById('strengthContainer');
 
         // --- UI UPDATES ---
         function updateVisuals() {
@@ -261,9 +260,19 @@
             maskBox.style.backgroundColor = color;
 
             if (isFeather) {
+                // Apply visual blur based on strength
+                // spread-radius set to featherVal/2, blur-radius to featherVal
                 maskBox.classList.add('feathered');
+                maskBox.style.boxShadow = `0 0 ${featherVal}px ${featherVal/2}px ${color}`;
+                
+                // Enable Slider UI
+                strengthContainer.classList.remove('opacity-50', 'pointer-events-none');
             } else {
                 maskBox.classList.remove('feathered');
+                maskBox.style.boxShadow = 'none';
+                
+                // Disable Slider UI
+                strengthContainer.classList.add('opacity-50', 'pointer-events-none');
             }
         }
 
@@ -275,6 +284,11 @@
 
         featherToggle.addEventListener('change', (e) => {
             isFeather = e.target.checked;
+            updateVisuals();
+        });
+
+        featherStrength.addEventListener('input', (e) => {
+            featherVal = parseInt(e.target.value);
             updateVisuals();
         });
 
@@ -426,13 +440,16 @@
                         });
 
                         if (isFeather) {
+                            // Map Strength slider (5-50) to PDF border width (roughly 2-25)
+                            const pdfBlurWidth = featherVal * 0.5;
+                            
                             page.drawRectangle({
-                                x: centerX - (realW / 2) - 2,
-                                y: pdfCenterY - (realH / 2) - 2,
-                                width: realW + 4,
-                                height: realH + 4,
+                                x: centerX - (realW / 2) - (pdfBlurWidth/2),
+                                y: pdfCenterY - (realH / 2) - (pdfBlurWidth/2),
+                                width: realW + pdfBlurWidth,
+                                height: realH + pdfBlurWidth,
                                 borderColor: pdfColor,
-                                borderWidth: 4,
+                                borderWidth: pdfBlurWidth,
                                 opacity: 0.3, 
                                 rotate: PDFLib.degrees(-rotation),
                             });
@@ -460,7 +477,8 @@
                     
                     if (isFeather) {
                         tCtx.shadowColor = colorPicker.value;
-                        tCtx.shadowBlur = 20; 
+                        // Use the slider value for Shadow Blur radius
+                        tCtx.shadowBlur = featherVal; 
                     } else {
                         tCtx.shadowBlur = 0;
                     }
