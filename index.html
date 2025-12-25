@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mobile PDF Watermark Hider</title>
+    <title>Universal Mask Tool</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#2563eb">
-    <link rel="apple-touch-icon" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.jpg">
     <meta name="apple-mobile-web-app-capable" content="yes">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -27,19 +27,18 @@
             touch-action: none;
         }
         
-        /* The Mask Box - Color is now set via JS */
         #mask-box {
             position: absolute;
             border: 2px solid rgba(0,0,0,0.5);
             box-sizing: border-box;
             z-index: 10;
-            /* Default starting color */
-            background-color: rgba(255, 255, 255, 0.7); 
+            background-color: rgba(255, 255, 255, 1); 
+            /* Pointer events none ensures clicks pass through to canvas during picking */
+            pointer-events: none; 
         }
 
         button { user-select: none; }
         
-        /* Color Picker Style */
         input[type="color"] {
             -webkit-appearance: none;
             border: none;
@@ -52,12 +51,18 @@
         }
         input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
         input[type="color"]::-webkit-color-swatch { border: none; }
+
+        /* Crosshair cursor when picking color */
+        .picking-mode {
+            cursor: crosshair !important;
+            border: 2px solid #2563eb !important; /* Blue border to show active */
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans pb-20">
 
     <div class="bg-white p-4 shadow mb-4 sticky top-0 z-20 flex justify-between items-center">
-        <h1 class="text-lg font-bold text-gray-800">PDF Mask App</h1>
+        <h1 class="text-lg font-bold text-gray-800">Mask Tool</h1>
         <button id="installBtn" class="hidden bg-blue-600 text-white text-sm px-4 py-2 rounded-full font-bold shadow hover:bg-blue-700 transition">
             Install App
         </button>
@@ -66,16 +71,16 @@
     <div class="px-4 max-w-md mx-auto">
         
         <div class="mb-4">
-            <label class="block text-sm font-bold mb-2 text-gray-700">1. Upload PDF</label>
-            <input type="file" id="pdfInput" accept="application/pdf" class="block w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white"/>
+            <label class="block text-sm font-bold mb-2 text-gray-700">1. Upload File (PDF or Image)</label>
+            <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png" class="block w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white"/>
         </div>
 
         <div id="editor-area" class="hidden">
-            <p class="text-xs text-gray-500 mb-2">Use controls below to place the colored box.</p>
+            <p id="instruction-text" class="text-xs text-gray-500 mb-2">Use controls below to place the box.</p>
             
             <div class="flex justify-center">
                 <div id="canvas-wrapper">
-                    <canvas id="pdf-render"></canvas>
+                    <canvas id="render-canvas"></canvas>
                     <div id="mask-box" style="left: 50px; top: 50px; width: 100px; height: 30px;"></div>
                 </div>
             </div>
@@ -83,8 +88,15 @@
             <div class="mt-6 bg-white p-4 rounded-lg shadow space-y-4">
                 
                 <div>
-                     <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Select Color</p>
-                     <input type="color" id="colorPicker" value="#ffffff">
+                     <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Patch Color</p>
+                     <div class="flex gap-2">
+                         <div class="flex-1">
+                             <input type="color" id="colorPicker" value="#ffffff">
+                         </div>
+                         <button id="eyedropperBtn" onclick="toggleEyedropper()" class="bg-gray-200 text-gray-700 px-4 rounded-lg font-bold hover:bg-gray-300 active:bg-blue-200">
+                             Pick from Page 🖌️
+                         </button>
+                     </div>
                 </div>
 
                 <hr>
@@ -126,7 +138,7 @@
                     </div>
                 </div>
 
-                <button onclick="processPDF()" class="w-full bg-green-600 text-white text-lg font-bold py-4 rounded-lg shadow mt-4 active:bg-green-800">
+                <button onclick="processFile()" class="w-full bg-green-600 text-white text-lg font-bold py-4 rounded-lg shadow mt-4 active:bg-green-800">
                     Apply & Download
                 </button>
                 <p id="status" class="text-center text-sm text-gray-500 mt-2"></p>
@@ -135,78 +147,94 @@
     </div>
 
     <script>
-        // ================= PWA INSTALL LOGIC =================
+        // --- PWA LOGIC ---
         let deferredPrompt;
         const installBtn = document.getElementById('installBtn');
-
-        // Check if service worker is supported and register it
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(registration => {
-                    console.log('SW registered: ', registration);
-                }).catch(registrationError => {
-                    console.log('SW registration failed: ', registrationError);
-                });
+                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW fail', err));
             });
         }
-
-        // Listen for the event that allows installation
         window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent Chrome 67 and earlier from automatically showing the prompt
-            e.preventDefault();
-            // Stash the event so it can be triggered later.
-            deferredPrompt = e;
-            // Update UI notify the user they can add to home screen
-            installBtn.classList.remove('hidden');
+            e.preventDefault(); deferredPrompt = e; installBtn.classList.remove('hidden');
         });
-
         installBtn.addEventListener('click', (e) => {
-            // hide our user interface that shows our A2HS button
-            installBtn.classList.add('hidden');
-            // Show the prompt
-            deferredPrompt.prompt();
-            // Wait for the user to respond to the prompt
-            deferredPrompt.userChoice.then((choiceResult) => {
-                if (choiceResult.outcome === 'accepted') {
-                    console.log('User accepted the A2HS prompt');
-                } else {
-                    console.log('User dismissed the A2HS prompt');
-                }
-                deferredPrompt = null;
-            });
+            installBtn.classList.add('hidden'); deferredPrompt.prompt(); deferredPrompt = null;
         });
+        window.addEventListener('appinstalled', () => { installBtn.classList.add('hidden'); });
 
-        // If app is already installed, ensure button is hidden
-        window.addEventListener('appinstalled', (evt) => {
-             installBtn.classList.add('hidden');
-        });
-
-        // ================= PDF APP LOGIC =================
-        let pdfData = null;
-        let pdfPageHeight = 0;
+        // --- GLOBAL VARS ---
+        let currentFileType = null; // 'pdf' or 'image'
+        let fileData = null;        
+        let originalWidth = 0;      
+        let originalHeight = 0;     
         let canvasScale = 1.0;
+        let isEyedropperActive = false;
 
-        // Current state of the box 
         let box = { x: 20, y: 20, w: 100, h: 40 };
 
-        const fileInput = document.getElementById('pdfInput');
+        const fileInput = document.getElementById('fileInput');
         const editorArea = document.getElementById('editor-area');
-        const canvas = document.getElementById('pdf-render');
-        const ctx = canvas.getContext('2d');
+        const canvas = document.getElementById('render-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const maskBox = document.getElementById('mask-box');
         const colorPicker = document.getElementById('colorPicker');
+        const wrapper = document.getElementById('canvas-wrapper');
+        const instructionText = document.getElementById('instruction-text');
 
-        // Update preview box color instantly on selection
-        colorPicker.addEventListener('input', (e) => {
-            // Use some transparency for preview so we can see what we are covering
-            const hex = e.target.value;
-            const r = parseInt(hex.slice(1, 3), 16);
-            const g = parseInt(hex.slice(3, 5), 16);
-            const b = parseInt(hex.slice(5, 7), 16);
-            maskBox.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.7)`;
+        // --- EYEDROPPER LOGIC ---
+        function toggleEyedropper() {
+            isEyedropperActive = !isEyedropperActive;
+            const btn = document.getElementById('eyedropperBtn');
+            
+            if (isEyedropperActive) {
+                wrapper.classList.add('picking-mode');
+                btn.classList.add('bg-blue-200', 'border-blue-500', 'text-blue-800');
+                btn.innerText = "Tap on Image now...";
+                instructionText.innerText = "Tap anywhere on the image/pdf to pick that color.";
+            } else {
+                wrapper.classList.remove('picking-mode');
+                btn.classList.remove('bg-blue-200', 'border-blue-500', 'text-blue-800');
+                btn.innerText = "Pick from Page 🖌️";
+                instructionText.innerText = "Use controls below to place the box.";
+            }
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        // Handle Click on Canvas for Color Picking
+        wrapper.addEventListener('click', (e) => {
+            if (!isEyedropperActive) return;
+
+            // 1. Get click coordinates relative to the canvas
+            const rect = canvas.getBoundingClientRect();
+            // Scale the click coordinates to match the internal canvas resolution
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+
+            // 2. Get Pixel Data
+            const pixel = ctx.getImageData(x, y, 1, 1).data;
+            const hex = rgbToHex(pixel[0], pixel[1], pixel[2]);
+
+            // 3. Update Inputs
+            colorPicker.value = hex;
+            maskBox.style.backgroundColor = hex; // Solid color for visual
+
+            // 4. Turn off eyedropper
+            toggleEyedropper();
         });
 
-        // Helper: Convert Hex to PDF-Lib RGB (0-1 range)
+
+        // --- COLOR PICKER CHANGE ---
+        colorPicker.addEventListener('input', (e) => {
+            maskBox.style.backgroundColor = e.target.value;
+        });
+
         function hexToPdfColor(hex) {
             const r = parseInt(hex.slice(1, 3), 16) / 255;
             const g = parseInt(hex.slice(3, 5), 16) / 255;
@@ -214,43 +242,86 @@
             return PDFLib.rgb(r, g, b);
         }
 
-        // --- 1. HANDLE UPLOAD ---
+        // --- FILE HANDLING (PDF & IMAGE) ---
         fileInput.addEventListener('change', async (e) => {
             if (e.target.files.length === 0) return;
             const file = e.target.files[0];
-            pdfData = await file.arrayBuffer();
 
-            const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+            if (file.type === 'application/pdf') {
+                currentFileType = 'pdf';
+                await loadPDF(file);
+            } else if (file.type.startsWith('image/')) {
+                currentFileType = 'image';
+                await loadImage(file);
+            } else {
+                alert("Please upload a PDF or an Image.");
+            }
+        });
+
+        async function loadPDF(file) {
+            fileData = await file.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: fileData });
             const pdf = await loadingTask.promise;
             const page = await pdf.getPage(1);
 
-            // Scale logic: Fit to screen width (minus padding)
             const viewportRaw = page.getViewport({ scale: 1 });
-            const screenWidth = window.innerWidth - 40; 
-            canvasScale = screenWidth / viewportRaw.width;
-            if (canvasScale > 2) canvasScale = 2;
+            originalWidth = viewportRaw.width;
+            originalHeight = viewportRaw.height;
+            
+            fitToScreen(originalWidth); 
 
             const viewport = page.getViewport({ scale: canvasScale });
-
             canvas.width = viewport.width;
             canvas.height = viewport.height;
-            pdfPageHeight = viewportRaw.height;
 
             const renderContext = { canvasContext: ctx, viewport: viewport };
             await page.render(renderContext).promise;
             
-            // Initialize Box Position (Center it roughly)
-            box.x = (viewport.width / 2) - 50;
-            box.y = (viewport.height / 2) - 20;
-            updateBoxVisual();
-            
-            // Initialize preview color based on default picker value
-            colorPicker.dispatchEvent(new Event('input'));
+            finalizeLoad(viewport.width, viewport.height);
+        }
 
+        async function loadImage(file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    fileData = img; 
+                    originalWidth = img.width;
+                    originalHeight = img.height;
+
+                    fitToScreen(originalWidth);
+
+                    canvas.width = originalWidth * canvasScale;
+                    canvas.height = originalHeight * canvasScale;
+
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    finalizeLoad(canvas.width, canvas.height);
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function fitToScreen(realWidth) {
+            const screenWidth = window.innerWidth - 40; 
+            canvasScale = screenWidth / realWidth;
+            if (canvasScale > 2) canvasScale = 2; 
+        }
+
+        function finalizeLoad(viewW, viewH) {
+            resetBox(viewW, viewH);
             editorArea.classList.remove('hidden');
-        });
+            // Ensure picker matches box
+            colorPicker.dispatchEvent(new Event('input'));
+        }
 
-        // --- 2. CONTROL FUNCTIONS ---
+        function resetBox(viewW, viewH) {
+            box.x = (viewW / 2) - 50;
+            box.y = (viewH / 2) - 20;
+            updateBoxVisual();
+        }
+
+        // --- BOX MOVEMENT ---
         function moveBox(dx, dy) {
             box.x += dx * 2; 
             box.y += dy * 2;
@@ -272,57 +343,69 @@
             maskBox.style.height = box.h + 'px';
         }
 
-        // --- 3. PROCESS & DOWNLOAD ---
-        async function processPDF() {
-            if (!pdfData) return;
+        // --- PROCESSING & SAVING ---
+        async function processFile() {
             const status = document.getElementById('status');
             status.innerText = "Processing...";
 
+            const realX = box.x / canvasScale;
+            const realW = box.w / canvasScale;
+            const realH = box.h / canvasScale;
+
             try {
-                const pdfDoc = await PDFLib.PDFDocument.load(pdfData);
-                const pages = pdfDoc.getPages();
+                if (currentFileType === 'pdf') {
+                    const pdfDoc = await PDFLib.PDFDocument.load(fileData);
+                    const pages = pdfDoc.getPages();
+                    const selectedColor = hexToPdfColor(colorPicker.value);
+                    
+                    const visualYOnPdf = box.y / canvasScale;
+                    const finalY = originalHeight - (visualYOnPdf + realH);
 
-                // Get selected color
-                const selectedColor = hexToPdfColor(colorPicker.value);
-
-                // Convert Screen Pixels -> PDF Points
-                const pdfX = box.x / canvasScale;
-                const pdfW = box.w / canvasScale;
-                const pdfH = box.h / canvasScale;
-                const visualYOnPdf = box.y / canvasScale;
-                const finalY = pdfPageHeight - (visualYOnPdf + pdfH);
-
-                pages.forEach(page => {
-                    page.drawRectangle({
-                        x: pdfX,
-                        y: finalY,
-                        width: pdfW,
-                        height: pdfH,
-                        color: selectedColor, // Use chosen color
-                        opacity: 1, // Solid opacity for final PDF
+                    pages.forEach(page => {
+                        page.drawRectangle({
+                            x: realX, y: finalY, width: realW, height: realH,
+                            color: selectedColor, opacity: 1,
+                        });
                     });
-                });
 
-                const pdfBytes = await pdfDoc.save();
-                download(pdfBytes, "masked_file.pdf");
+                    const pdfBytes = await pdfDoc.save();
+                    download(pdfBytes, "masked_file.pdf", 'application/pdf');
+
+                } else if (currentFileType === 'image') {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = originalWidth;
+                    tempCanvas.height = originalHeight;
+                    const tCtx = tempCanvas.getContext('2d');
+
+                    tCtx.drawImage(fileData, 0, 0);
+
+                    tCtx.fillStyle = colorPicker.value;
+                    const realY = box.y / canvasScale;
+                    tCtx.fillRect(realX, realY, realW, realH);
+
+                    tempCanvas.toBlob((blob) => {
+                        download(blob, "masked_image.jpg", 'image/jpeg');
+                    }, 'image/jpeg', 0.95);
+                }
+                
                 status.innerText = "Done! Downloading...";
 
             } catch (err) {
                 console.error(err);
                 status.innerText = "Error.";
-                alert("An error occurred.");
+                alert("An error occurred processing the file.");
             }
         }
 
-        function download(data, filename) {
-            const blob = new Blob([data], { type: 'application/pdf' });
+        function download(data, filename, mimeType) {
+            let blob;
+            if (data instanceof Blob) blob = data;
+            else blob = new Blob([data], { type: mimeType });
+            
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
     </script>
 </body>
