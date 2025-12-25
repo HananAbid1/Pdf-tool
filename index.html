@@ -32,17 +32,13 @@
         /* The Visual Mask Box */
         #mask-box {
             position: absolute;
-            border: 2px solid rgba(0,0,0,0.5); /* Guide border */
+            /* Border is removed by JS when feathering is on */
+            border: 2px solid rgba(0,0,0,0.5); 
             box-sizing: border-box;
             z-index: 10;
             transform-origin: center center;
             pointer-events: none; 
-            transition: transform 0.1s; /* Removed box-shadow transition for instant slider response */
-        }
-
-        /* Feather Effect (Dynamic via JS now) */
-        .feathered {
-            border: none !important; 
+            transition: transform 0.1s, background-color 0.2s, box-shadow 0.2s;
         }
 
         button { user-select: none; }
@@ -54,43 +50,11 @@
         }
 
         /* --- SLIDER CSS --- */
-        input[type=range] {
-            -webkit-appearance: none;
-            width: 100%; 
-            background: transparent; 
-        }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 24px;
-            width: 24px;
-            border-radius: 50%;
-            background: #2563eb;
-            cursor: pointer;
-            margin-top: -8px; 
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 8px;
-            cursor: pointer;
-            background: #e5e7eb;
-            border-radius: 5px;
-        }
-        input[type=range]::-moz-range-thumb {
-            height: 24px;
-            width: 24px;
-            border: none;
-            border-radius: 50%;
-            background: #2563eb;
-            cursor: pointer;
-        }
-        input[type=range]::-moz-range-track {
-            width: 100%;
-            height: 8px;
-            cursor: pointer;
-            background: #e5e7eb;
-            border-radius: 5px;
-        }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #2563eb; cursor: pointer; margin-top: -8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; cursor: pointer; background: #e5e7eb; border-radius: 5px; }
+        input[type=range]::-moz-range-thumb { height: 24px; width: 24px; border: none; border-radius: 50%; background: #2563eb; cursor: pointer; }
+        input[type=range]::-moz-range-track { width: 100%; height: 8px; cursor: pointer; background: #e5e7eb; border-radius: 5px; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans pb-20">
@@ -103,7 +67,6 @@
     </div>
 
     <div class="px-4 max-w-md mx-auto">
-        
         <div class="mb-4">
             <label class="block text-sm font-bold mb-2 text-gray-700">1. Upload File</label>
             <input type="file" id="fileInput" accept="application/pdf, image/jpeg, image/png" class="block w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white"/>
@@ -111,7 +74,6 @@
 
         <div id="editor-area" class="hidden">
             <p id="instruction-text" class="text-xs text-center text-gray-500 mb-2">Use controls below to configure the patch.</p>
-            
             <div class="flex justify-center">
                 <div id="canvas-wrapper">
                     <canvas id="render-canvas"></canvas>
@@ -120,7 +82,6 @@
             </div>
 
             <div class="mt-6 bg-white p-4 rounded-lg shadow space-y-4">
-                
                 <div>
                      <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Patch Color</p>
                      <div class="flex gap-2">
@@ -132,9 +93,7 @@
                          </button>
                      </div>
                 </div>
-
                 <hr>
-
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Angle: <span id="angleDisplay" class="text-blue-600">0°</span></p>
@@ -146,7 +105,6 @@
                             <span>45°</span>
                         </div>
                     </div>
-                    
                     <div class="flex flex-col gap-2 border-l pl-2">
                         <div class="flex items-center justify-center">
                              <label class="inline-flex items-center cursor-pointer">
@@ -156,46 +114,31 @@
                               </label>
                         </div>
                         <div id="strengthContainer" class="opacity-50 pointer-events-none transition-opacity">
-                            <input type="range" id="featherStrength" min="5" max="50" value="20">
+                            <input type="range" id="featherStrength" min="10" max="100" value="40">
                             <p class="text-[10px] text-center text-gray-400 uppercase">Strength</p>
                         </div>
                     </div>
                 </div>
-
                 <hr>
-
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Position</p>
                         <div class="grid grid-cols-3 gap-1 max-w-[120px] mx-auto">
-                            <div></div>
-                            <button onclick="moveBox(0, -5)" class="bg-gray-200 p-2 rounded hover:bg-gray-300">↑</button>
-                            <div></div>
+                            <div></div><button onclick="moveBox(0, -5)" class="bg-gray-200 p-2 rounded hover:bg-gray-300">↑</button><div></div>
                             <button onclick="moveBox(-5, 0)" class="bg-gray-200 p-2 rounded hover:bg-gray-300">←</button>
                             <div class="flex items-center justify-center text-gray-400">●</div>
                             <button onclick="moveBox(5, 0)" class="bg-gray-200 p-2 rounded hover:bg-gray-300">→</button>
-                            <div></div>
-                            <button onclick="moveBox(0, 5)" class="bg-gray-200 p-2 rounded hover:bg-gray-300">↓</button>
-                            <div></div>
+                            <div></div><button onclick="moveBox(0, 5)" class="bg-gray-200 p-2 rounded hover:bg-gray-300">↓</button><div></div>
                         </div>
                     </div>
                     <div>
                         <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Size</p>
                         <div class="flex flex-col gap-2">
-                            <div class="flex gap-1 items-center">
-                                <span class="text-xs w-4 font-bold text-gray-500">W</span>
-                                <button onclick="resizeBox(-5, 0)" class="bg-gray-200 flex-1 p-2 rounded hover:bg-gray-300">-</button>
-                                <button onclick="resizeBox(5, 0)" class="bg-gray-200 flex-1 p-2 rounded hover:bg-gray-300">+</button>
-                            </div>
-                            <div class="flex gap-1 items-center">
-                                <span class="text-xs w-4 font-bold text-gray-500">H</span>
-                                <button onclick="resizeBox(0, -5)" class="bg-gray-200 flex-1 p-2 rounded hover:bg-gray-300">-</button>
-                                <button onclick="resizeBox(0, 5)" class="bg-gray-200 flex-1 p-2 rounded hover:bg-gray-300">+</button>
-                            </div>
+                            <div class="flex gap-1 items-center"><span class="text-xs w-4 font-bold text-gray-500">W</span><button onclick="resizeBox(-5, 0)" class="bg-gray-200 flex-1 p-2 rounded hover:bg-gray-300">-</button><button onclick="resizeBox(5, 0)" class="bg-gray-200 flex-1 p-2 rounded hover:bg-gray-300">+</button></div>
+                            <div class="flex gap-1 items-center"><span class="text-xs w-4 font-bold text-gray-500">H</span><button onclick="resizeBox(0, -5)" class="bg-gray-200 flex-1 p-2 rounded hover:bg-gray-300">-</button><button onclick="resizeBox(0, 5)" class="bg-gray-200 flex-1 p-2 rounded hover:bg-gray-300">+</button></div>
                         </div>
                     </div>
                 </div>
-
                 <button onclick="processFile()" class="w-full bg-green-600 text-white text-lg font-bold py-4 rounded-lg shadow mt-4 active:bg-green-800 transition">
                     Apply & Download HQ
                 </button>
@@ -206,312 +149,177 @@
 
     <script>
         // --- PWA LOGIC ---
-        let deferredPrompt;
-        const installBtn = document.getElementById('installBtn');
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
-        }
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault(); deferredPrompt = e; installBtn.classList.remove('hidden');
-        });
-        installBtn.addEventListener('click', () => {
-            installBtn.classList.add('hidden'); deferredPrompt.prompt(); deferredPrompt = null;
-        });
+        let deferredPrompt; const installBtn = document.getElementById('installBtn');
+        if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; installBtn.classList.remove('hidden'); });
+        installBtn.addEventListener('click', () => { installBtn.classList.add('hidden'); deferredPrompt.prompt(); deferredPrompt = null; });
         window.addEventListener('appinstalled', () => installBtn.classList.add('hidden'));
 
         // --- GLOBAL VARIABLES ---
-        let currentFileType = null;
-        let uploadedFileMimeType = 'image/jpeg';
-        let fileData = null;        
-        let originalWidth = 0;      
-        let originalHeight = 0;     
-        let canvasScale = 1.0;
+        let currentFileType = null; let uploadedFileMimeType = 'image/jpeg';
+        let fileData = null; let originalWidth = 0; let originalHeight = 0; let canvasScale = 1.0;
         let isEyedropperActive = false;
-        
         let box = { x: 20, y: 20, w: 100, h: 40 };
-        let rotation = 0; 
-        let isFeather = false; 
-        let featherVal = 20; // Default strength
+        let rotation = 0; let isFeather = false; let featherVal = 40;
 
         // DOM ELEMENTS
-        const fileInput = document.getElementById('fileInput');
-        const editorArea = document.getElementById('editor-area');
-        const canvas = document.getElementById('render-canvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const maskBox = document.getElementById('mask-box');
-        const colorPicker = document.getElementById('colorPicker');
-        const wrapper = document.getElementById('canvas-wrapper');
-        const angleSlider = document.getElementById('angleSlider');
-        const angleDisplay = document.getElementById('angleDisplay');
-        const featherToggle = document.getElementById('featherToggle');
-        const featherStrength = document.getElementById('featherStrength');
-        const strengthContainer = document.getElementById('strengthContainer');
+        const fileInput = document.getElementById('fileInput'); const editorArea = document.getElementById('editor-area');
+        const canvas = document.getElementById('render-canvas'); const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const maskBox = document.getElementById('mask-box'); const colorPicker = document.getElementById('colorPicker');
+        const wrapper = document.getElementById('canvas-wrapper'); const angleSlider = document.getElementById('angleSlider');
+        const angleDisplay = document.getElementById('angleDisplay'); const featherToggle = document.getElementById('featherToggle');
+        const featherStrength = document.getElementById('featherStrength'); const strengthContainer = document.getElementById('strengthContainer');
 
-        // --- UI UPDATES ---
+        // --- UI UPDATES (UPDATED FOR TRUE FEATHERING) ---
         function updateVisuals() {
-            maskBox.style.left = box.x + 'px';
-            maskBox.style.top = box.y + 'px';
-            maskBox.style.width = box.w + 'px';
-            maskBox.style.height = box.h + 'px';
+            maskBox.style.left = box.x + 'px'; maskBox.style.top = box.y + 'px';
+            maskBox.style.width = box.w + 'px'; maskBox.style.height = box.h + 'px';
             maskBox.style.transform = `rotate(${rotation}deg)`;
             
             const color = colorPicker.value;
-            maskBox.style.setProperty('--box-color', color);
-            maskBox.style.backgroundColor = color;
-
+            
             if (isFeather) {
-                // Apply visual blur based on strength
-                // spread-radius set to featherVal/2, blur-radius to featherVal
-                maskBox.classList.add('feathered');
-                maskBox.style.boxShadow = `0 0 ${featherVal}px ${featherVal/2}px ${color}`;
-                
-                // Enable Slider UI
+                // Feather Mode: Transparent background, centered shadow replaces solid box
+                maskBox.style.backgroundColor = 'transparent';
+                maskBox.style.border = 'none';
+                // box-shadow: offset-x | offset-y | blur-radius | spread-radius | color
+                // Using 0 spread ensures the blur is centered on the edge
+                maskBox.style.boxShadow = `0 0 ${featherVal}px ${color}`;
                 strengthContainer.classList.remove('opacity-50', 'pointer-events-none');
             } else {
-                maskBox.classList.remove('feathered');
+                // Solid Mode: Solid background, guide border, no shadow
+                maskBox.style.backgroundColor = color;
+                maskBox.style.border = '2px solid rgba(0,0,0,0.5)';
                 maskBox.style.boxShadow = 'none';
-                
-                // Disable Slider UI
                 strengthContainer.classList.add('opacity-50', 'pointer-events-none');
             }
         }
 
-        angleSlider.addEventListener('input', (e) => {
-            rotation = parseInt(e.target.value);
-            angleDisplay.innerText = rotation + "°";
-            updateVisuals();
-        });
-
-        featherToggle.addEventListener('change', (e) => {
-            isFeather = e.target.checked;
-            updateVisuals();
-        });
-
-        featherStrength.addEventListener('input', (e) => {
-            featherVal = parseInt(e.target.value);
-            updateVisuals();
-        });
-
+        angleSlider.addEventListener('input', (e) => { rotation = parseInt(e.target.value); angleDisplay.innerText = rotation + "°"; updateVisuals(); });
+        featherToggle.addEventListener('change', (e) => { isFeather = e.target.checked; updateVisuals(); });
+        featherStrength.addEventListener('input', (e) => { featherVal = parseInt(e.target.value); updateVisuals(); });
         colorPicker.addEventListener('input', updateVisuals);
 
         // --- EYEDROPPER LOGIC ---
         function toggleEyedropper() {
-            isEyedropperActive = !isEyedropperActive;
-            const btn = document.getElementById('eyedropperBtn');
-            if (isEyedropperActive) {
-                wrapper.classList.add('picking-mode');
-                btn.classList.add('bg-blue-200', 'text-blue-800');
-                btn.innerText = "Tap Image...";
-            } else {
-                wrapper.classList.remove('picking-mode');
-                btn.classList.remove('bg-blue-200', 'text-blue-800');
-                btn.innerText = "Pick Color 🖌️";
-            }
+            isEyedropperActive = !isEyedropperActive; const btn = document.getElementById('eyedropperBtn');
+            if (isEyedropperActive) { wrapper.classList.add('picking-mode'); btn.classList.add('bg-blue-200', 'text-blue-800'); btn.innerText = "Tap Image..."; }
+            else { wrapper.classList.remove('picking-mode'); btn.classList.remove('bg-blue-200', 'text-blue-800'); btn.innerText = "Pick Color 🖌️"; }
         }
-
-        function rgbToHex(r, g, b) {
-            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-        }
-
+        function rgbToHex(r, g, b) { return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1); }
         wrapper.addEventListener('click', (e) => {
             if (!isEyedropperActive) return;
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
+            const rect = canvas.getBoundingClientRect(); const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX; const y = (e.clientY - rect.top) * scaleY;
             const pixel = ctx.getImageData(x, y, 1, 1).data;
-            const hex = rgbToHex(pixel[0], pixel[1], pixel[2]);
-            colorPicker.value = hex;
-            updateVisuals();
-            toggleEyedropper();
+            colorPicker.value = rgbToHex(pixel[0], pixel[1], pixel[2]);
+            updateVisuals(); toggleEyedropper();
         });
 
         // --- FILE LOADING ---
         fileInput.addEventListener('change', async (e) => {
             if (e.target.files.length === 0) return;
-            const file = e.target.files[0];
-            uploadedFileMimeType = file.type;
-
-            if (file.type === 'application/pdf') {
-                currentFileType = 'pdf';
-                await loadPDF(file);
-            } else if (file.type.startsWith('image/')) {
-                currentFileType = 'image';
-                await loadImage(file);
-            }
+            const file = e.target.files[0]; uploadedFileMimeType = file.type;
+            if (file.type === 'application/pdf') { currentFileType = 'pdf'; await loadPDF(file); }
+            else if (file.type.startsWith('image/')) { currentFileType = 'image'; await loadImage(file); }
         });
-
         async function loadPDF(file) {
-            fileData = await file.arrayBuffer();
-            const loadingTask = pdfjsLib.getDocument({ data: fileData });
-            const pdf = await loadingTask.promise;
-            const page = await pdf.getPage(1);
-            const viewportRaw = page.getViewport({ scale: 1 });
-            originalWidth = viewportRaw.width;
-            originalHeight = viewportRaw.height;
-            fitToScreen(originalWidth); 
+            fileData = await file.arrayBuffer(); const pdf = await pdfjsLib.getDocument({ data: fileData }).promise;
+            const page = await pdf.getPage(1); const viewportRaw = page.getViewport({ scale: 1 });
+            originalWidth = viewportRaw.width; originalHeight = viewportRaw.height; fitToScreen(originalWidth);
             const viewport = page.getViewport({ scale: canvasScale });
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            const renderContext = { canvasContext: ctx, viewport: viewport };
-            await page.render(renderContext).promise;
-            finalizeLoad(viewport.width, viewport.height);
+            canvas.width = viewport.width; canvas.height = viewport.height;
+            await page.render({ canvasContext: ctx, viewport: viewport }).promise; finalizeLoad(viewport.width, viewport.height);
         }
-
         async function loadImage(file) {
             const reader = new FileReader();
-            reader.onload = function(event) {
-                const img = new Image();
-                img.onload = function() {
-                    fileData = img; 
-                    originalWidth = img.width;
-                    originalHeight = img.height;
-                    fitToScreen(originalWidth);
-                    canvas.width = originalWidth * canvasScale;
-                    canvas.height = originalHeight * canvasScale;
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    finalizeLoad(canvas.width, canvas.height);
-                }
-                img.src = event.target.result;
-            }
-            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image(); img.onload = () => {
+                    fileData = img; originalWidth = img.width; originalHeight = img.height; fitToScreen(originalWidth);
+                    canvas.width = originalWidth * canvasScale; canvas.height = originalHeight * canvasScale;
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height); finalizeLoad(canvas.width, canvas.height);
+                }; img.src = event.target.result;
+            }; reader.readAsDataURL(file);
         }
+        function fitToScreen(realWidth) { const screenWidth = window.innerWidth - 40; canvasScale = screenWidth / realWidth; if (canvasScale > 2) canvasScale = 2; }
+        function finalizeLoad(viewW, viewH) { resetBox(viewW, viewH); editorArea.classList.remove('hidden'); updateVisuals(); }
+        function resetBox(viewW, viewH) { box.x = (viewW / 2) - 50; box.y = (viewH / 2) - 20; updateVisuals(); }
+        function moveBox(dx, dy) { box.x += dx * 2; box.y += dy * 2; updateVisuals(); }
+        function resizeBox(dw, dh) { box.w += dw * 2; box.h += dh * 2; if (box.w < 10) box.w = 10; if (box.h < 10) box.h = 10; updateVisuals(); }
 
-        function fitToScreen(realWidth) {
-            const screenWidth = window.innerWidth - 40; 
-            canvasScale = screenWidth / realWidth;
-            if (canvasScale > 2) canvasScale = 2; 
-        }
-
-        function finalizeLoad(viewW, viewH) {
-            resetBox(viewW, viewH);
-            editorArea.classList.remove('hidden');
-            updateVisuals();
-        }
-
-        function resetBox(viewW, viewH) {
-            box.x = (viewW / 2) - 50; box.y = (viewH / 2) - 20; 
-            updateVisuals();
-        }
-
-        function moveBox(dx, dy) {
-            box.x += dx * 2; box.y += dy * 2; updateVisuals();
-        }
-        function resizeBox(dw, dh) {
-            box.w += dw * 2; box.h += dh * 2;
-            if (box.w < 10) box.w = 10; if (box.h < 10) box.h = 10;
-            updateVisuals();
-        }
-
-        // --- PROCESSING (HQ) ---
+        // --- PROCESSING (UPDATED FOR TRUE FEATHERING) ---
         async function processFile() {
-            const status = document.getElementById('status');
-            status.innerText = "Processing High Quality...";
-
-            const realX = box.x / canvasScale;
-            const realY = box.y / canvasScale;
-            const realW = box.w / canvasScale;
-            const realH = box.h / canvasScale;
+            const status = document.getElementById('status'); status.innerText = "Processing High Quality...";
+            const realX = box.x / canvasScale; const realY = box.y / canvasScale;
+            const realW = box.w / canvasScale; const realH = box.h / canvasScale;
 
             try {
                 if (currentFileType === 'pdf') {
-                    const pdfDoc = await PDFLib.PDFDocument.load(fileData);
-                    const pages = pdfDoc.getPages();
-                    
-                    const hex = colorPicker.value;
-                    const r = parseInt(hex.slice(1, 3), 16) / 255;
-                    const g = parseInt(hex.slice(3, 5), 16) / 255;
-                    const b = parseInt(hex.slice(5, 7), 16) / 255;
+                    // --- PDF EXPORT ---
+                    const pdfDoc = await PDFLib.PDFDocument.load(fileData); const pages = pdfDoc.getPages();
+                    const hex = colorPicker.value; const r = parseInt(hex.slice(1, 3), 16) / 255; const g = parseInt(hex.slice(3, 5), 16) / 255; const b = parseInt(hex.slice(5, 7), 16) / 255;
                     const pdfColor = PDFLib.rgb(r, g, b);
-
-                    const centerX = realX + (realW / 2);
-                    const visualCenterY = realY + (realH / 2);
-                    const pdfCenterY = originalHeight - visualCenterY;
+                    const centerX = realX + (realW / 2); const visualCenterY = realY + (realH / 2); const pdfCenterY = originalHeight - visualCenterY;
 
                     pages.forEach(page => {
-                        page.drawRectangle({
-                            x: centerX - (realW / 2),
-                            y: pdfCenterY - (realH / 2),
-                            width: realW,
-                            height: realH,
-                            color: pdfColor,
-                            rotate: PDFLib.degrees(-rotation), 
-                        });
-
                         if (isFeather) {
-                            // Map Strength slider (5-50) to PDF border width (roughly 2-25)
-                            const pdfBlurWidth = featherVal * 0.5;
-                            
+                            // Feather Mode: Draw ONLY a thick, semi-transparent border centered on the edge. No solid fill.
+                            // The border extends 50% in and 50% out.
                             page.drawRectangle({
-                                x: centerX - (realW / 2) - (pdfBlurWidth/2),
-                                y: pdfCenterY - (realH / 2) - (pdfBlurWidth/2),
-                                width: realW + pdfBlurWidth,
-                                height: realH + pdfBlurWidth,
+                                x: centerX - (realW / 2), y: pdfCenterY - (realH / 2),
+                                width: realW, height: realH,
                                 borderColor: pdfColor,
-                                borderWidth: pdfBlurWidth,
-                                opacity: 0.3, 
+                                borderWidth: featherVal, // Use slider value for total border width
+                                opacity: 0.5, // Fixed translucency for the blend effect
+                                rotate: PDFLib.degrees(-rotation),
+                            });
+                        } else {
+                            // Solid Mode: Draw the solid opaque box.
+                            page.drawRectangle({
+                                x: centerX - (realW / 2), y: pdfCenterY - (realH / 2),
+                                width: realW, height: realH,
+                                color: pdfColor,
+                                opacity: 1.0,
                                 rotate: PDFLib.degrees(-rotation),
                             });
                         }
                     });
-
-                    const pdfBytes = await pdfDoc.save();
-                    download(pdfBytes, "patched_doc.pdf", 'application/pdf');
+                    const pdfBytes = await pdfDoc.save(); download(pdfBytes, "patched_doc.pdf", 'application/pdf');
 
                 } else if (currentFileType === 'image') {
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = originalWidth;
-                    tempCanvas.height = originalHeight;
+                    // --- IMAGE EXPORT ---
+                    const tempCanvas = document.createElement('canvas'); tempCanvas.width = originalWidth; tempCanvas.height = originalHeight;
                     const tCtx = tempCanvas.getContext('2d');
+                    tCtx.drawImage(fileData, 0, 0); tCtx.save();
+                    const cx = realX + realW/2; const cy = realY + realH/2;
+                    tCtx.translate(cx, cy); tCtx.rotate(rotation * Math.PI / 180);
 
-                    tCtx.drawImage(fileData, 0, 0);
-                    tCtx.save();
-                    
-                    const cx = realX + realW/2;
-                    const cy = realY + realH/2;
-                    tCtx.translate(cx, cy);
-                    tCtx.rotate(rotation * Math.PI / 180);
-
-                    tCtx.fillStyle = colorPicker.value;
-                    
                     if (isFeather) {
+                        // Feather Mode: Draw TRANSPARENT fill with a colored shadow.
+                        // This renders ONLY the shadow, centered on the edge.
+                        tCtx.fillStyle = 'rgba(0,0,0,0)'; // Transparent
                         tCtx.shadowColor = colorPicker.value;
-                        // Use the slider value for Shadow Blur radius
-                        tCtx.shadowBlur = featherVal; 
+                        tCtx.shadowBlur = featherVal; // Use slider value for blur radius
                     } else {
+                        // Solid Mode: Draw solid fill with no shadow.
+                        tCtx.fillStyle = colorPicker.value;
                         tCtx.shadowBlur = 0;
                     }
 
-                    tCtx.fillRect(-realW/2, -realH/2, realW, realH);
-                    tCtx.restore();
+                    tCtx.fillRect(-realW/2, -realH/2, realW, realH); tCtx.restore();
 
-                    let mime = uploadedFileMimeType;
-                    if (mime !== 'image/jpeg' && mime !== 'image/png') mime = 'image/png';
+                    let mime = uploadedFileMimeType; if (mime !== 'image/jpeg' && mime !== 'image/png') mime = 'image/png';
                     const ext = mime === 'image/jpeg' ? 'jpg' : 'png';
-
-                    tempCanvas.toBlob((blob) => {
-                        download(blob, `patched_image.${ext}`, mime);
-                    }, mime, 1.0); 
+                    tempCanvas.toBlob((blob) => { download(blob, `patched_image.${ext}`, mime); }, mime, 1.0);
                 }
-                
                 status.innerText = "Done! Downloading...";
-
-            } catch (err) {
-                console.error(err);
-                status.innerText = "Error processing file.";
-                alert("An error occurred.");
-            }
+            } catch (err) { console.error(err); status.innerText = "Error processing file."; alert("An error occurred."); }
         }
 
         function download(data, filename, mimeType) {
-            let blob;
-            if (data instanceof Blob) blob = data;
-            else blob = new Blob([data], { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = filename;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            let blob; if (data instanceof Blob) blob = data; else blob = new Blob([data], { type: mimeType });
+            const url = URL.createObjectURL(blob); const a = document.createElement('a');
+            a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
     </script>
 </body>
