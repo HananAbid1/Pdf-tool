@@ -29,55 +29,76 @@
             background-color: #eee;
         }
         
-        /* The Visual Mask Box (DOM Element) */
+        /* The Visual Mask Box */
         #mask-box {
             position: absolute;
             border: 2px solid rgba(0,0,0,0.5); /* Guide border */
             box-sizing: border-box;
             z-index: 10;
-            /* Flex center to handle rotation pivot */
             transform-origin: center center;
             pointer-events: none; 
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        /* Classes for effects */
+        /* Feather Effect */
         .feathered {
-            /* Simulates the feathering visually on screen */
             box-shadow: 0 0 15px 15px var(--box-color);
-            border: none !important; /* Hide hard border when feathered */
+            border: none !important; 
         }
 
         button { user-select: none; }
         
-        input[type="color"] {
-            -webkit-appearance: none;
-            border: none;
-            width: 100%;
-            height: 40px;
-            padding: 0;
-            border-radius: 8px;
-            overflow: hidden;
-            cursor: pointer;
-        }
-        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-        input[type="color"]::-webkit-color-swatch { border: none; }
-
+        /* Eyedropper Styles */
         .picking-mode {
             cursor: crosshair !important;
             border: 2px solid #2563eb !important;
         }
 
-        /* Custom Slider Styling */
+        /* --- FIXED SLIDER CSS --- */
+        /* The track */
         input[type=range] {
-            -webkit-appearance: none; 
+            -webkit-appearance: none; /* Hides default slider */
+            width: 100%; 
             background: transparent; 
         }
+
+        /* The Thumb (Handle) for Chrome/Safari/Edge */
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
+            height: 28px;
+            width: 28px;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+            margin-top: -10px; /* Pulls thumb up to center on track */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
-        input[type=range]:focus {
-            outline: none; 
+
+        /* The Track for Chrome/Safari/Edge */
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #e5e7eb;
+            border-radius: 5px;
+        }
+        
+        /* Firefox Support */
+        input[type=range]::-moz-range-thumb {
+            height: 28px;
+            width: 28px;
+            border: none;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-moz-range-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #e5e7eb;
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -113,7 +134,7 @@
                      <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Patch Color</p>
                      <div class="flex gap-2">
                          <div class="flex-1">
-                             <input type="color" id="colorPicker" value="#ffffff">
+                             <input type="color" id="colorPicker" value="#ffffff" class="h-10 w-full rounded cursor-pointer">
                          </div>
                          <button id="eyedropperBtn" onclick="toggleEyedropper()" class="bg-gray-200 text-gray-700 px-4 rounded-lg font-bold hover:bg-gray-300 active:bg-blue-200">
                              Pick Color 🖌️
@@ -125,15 +146,17 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Angle: <span id="angleDisplay">0°</span></p>
-                        <input type="range" id="angleSlider" min="0" max="45" step="45" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
-                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                        <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Angle: <span id="angleDisplay" class="text-blue-600">0°</span></p>
+                        <div class="px-2">
+                            <input type="range" id="angleSlider" min="0" max="45" step="45" value="0">
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-400 mt-1 px-1">
                             <span>0°</span>
                             <span>45°</span>
                         </div>
                     </div>
                     
-                    <div class="flex flex-col items-center justify-center">
+                    <div class="flex flex-col items-center justify-center border-l">
                          <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Edge Style</p>
                          <label class="inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="featherToggle" class="sr-only peer">
@@ -150,13 +173,13 @@
                         <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Position</p>
                         <div class="grid grid-cols-3 gap-1 max-w-[120px] mx-auto">
                             <div></div>
-                            <button onclick="moveBox(0, -5)" class="bg-gray-200 p-2 rounded">↑</button>
+                            <button onclick="moveBox(0, -5)" class="bg-gray-200 p-2 rounded hover:bg-gray-300">↑</button>
                             <div></div>
-                            <button onclick="moveBox(-5, 0)" class="bg-gray-200 p-2 rounded">←</button>
-                            <div class="flex items-center justify-center">●</div>
-                            <button onclick="moveBox(5, 0)" class="bg-gray-200 p-2 rounded">→</button>
+                            <button onclick="moveBox(-5, 0)" class="bg-gray-200 p-2 rounded hover:bg-gray-300">←</button>
+                            <div class="flex items-center justify-center text-gray-400">●</div>
+                            <button onclick="moveBox(5, 0)" class="bg-gray-200 p-2 rounded hover:bg-gray-300">→</button>
                             <div></div>
-                            <button onclick="moveBox(0, 5)" class="bg-gray-200 p-2 rounded">↓</button>
+                            <button onclick="moveBox(0, 5)" class="bg-gray-200 p-2 rounded hover:bg-gray-300">↓</button>
                             <div></div>
                         </div>
                     </div>
@@ -164,20 +187,20 @@
                         <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Size</p>
                         <div class="flex flex-col gap-2">
                             <div class="flex gap-1 items-center">
-                                <span class="text-xs w-4">W</span>
-                                <button onclick="resizeBox(-5, 0)" class="bg-gray-200 flex-1 p-2 rounded">-</button>
-                                <button onclick="resizeBox(5, 0)" class="bg-gray-200 flex-1 p-2 rounded">+</button>
+                                <span class="text-xs w-4 font-bold text-gray-500">W</span>
+                                <button onclick="resizeBox(-5, 0)" class="bg-gray-200 flex-1 p-2 rounded hover:bg-gray-300">-</button>
+                                <button onclick="resizeBox(5, 0)" class="bg-gray-200 flex-1 p-2 rounded hover:bg-gray-300">+</button>
                             </div>
                             <div class="flex gap-1 items-center">
-                                <span class="text-xs w-4">H</span>
-                                <button onclick="resizeBox(0, -5)" class="bg-gray-200 flex-1 p-2 rounded">-</button>
-                                <button onclick="resizeBox(0, 5)" class="bg-gray-200 flex-1 p-2 rounded">+</button>
+                                <span class="text-xs w-4 font-bold text-gray-500">H</span>
+                                <button onclick="resizeBox(0, -5)" class="bg-gray-200 flex-1 p-2 rounded hover:bg-gray-300">-</button>
+                                <button onclick="resizeBox(0, 5)" class="bg-gray-200 flex-1 p-2 rounded hover:bg-gray-300">+</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <button onclick="processFile()" class="w-full bg-green-600 text-white text-lg font-bold py-4 rounded-lg shadow mt-4 active:bg-green-800">
+                <button onclick="processFile()" class="w-full bg-green-600 text-white text-lg font-bold py-4 rounded-lg shadow mt-4 active:bg-green-800 transition">
                     Apply & Download HQ
                 </button>
                 <p id="status" class="text-center text-sm text-gray-500 mt-2"></p>
@@ -209,10 +232,9 @@
         let canvasScale = 1.0;
         let isEyedropperActive = false;
         
-        // BOX STATE
         let box = { x: 20, y: 20, w: 100, h: 40 };
-        let rotation = 0; // 0 or 45
-        let isFeather = false; // true or false
+        let rotation = 0; 
+        let isFeather = false; 
 
         // DOM ELEMENTS
         const fileInput = document.getElementById('fileInput');
@@ -226,25 +248,18 @@
         const angleDisplay = document.getElementById('angleDisplay');
         const featherToggle = document.getElementById('featherToggle');
 
-        // --- 1. UI UPDATES (Rotation, Feather, Color) ---
-        
+        // --- UI UPDATES ---
         function updateVisuals() {
-            // Position & Size
             maskBox.style.left = box.x + 'px';
             maskBox.style.top = box.y + 'px';
             maskBox.style.width = box.w + 'px';
             maskBox.style.height = box.h + 'px';
-            
-            // Rotation
             maskBox.style.transform = `rotate(${rotation}deg)`;
             
-            // Color
             const color = colorPicker.value;
-            // Set CSS var for shadow color
             maskBox.style.setProperty('--box-color', color);
             maskBox.style.backgroundColor = color;
 
-            // Feathering
             if (isFeather) {
                 maskBox.classList.add('feathered');
             } else {
@@ -265,7 +280,7 @@
 
         colorPicker.addEventListener('input', updateVisuals);
 
-        // --- 2. EYEDROPPER LOGIC ---
+        // --- EYEDROPPER LOGIC ---
         function toggleEyedropper() {
             isEyedropperActive = !isEyedropperActive;
             const btn = document.getElementById('eyedropperBtn');
@@ -298,7 +313,7 @@
             toggleEyedropper();
         });
 
-        // --- 3. FILE LOADING ---
+        // --- FILE LOADING ---
         fileInput.addEventListener('change', async (e) => {
             if (e.target.files.length === 0) return;
             const file = e.target.files[0];
@@ -375,12 +390,11 @@
             updateVisuals();
         }
 
-        // --- 4. PROCESS FILE (THE HEAVY LIFTING) ---
+        // --- PROCESSING (HQ) ---
         async function processFile() {
             const status = document.getElementById('status');
             status.innerText = "Processing High Quality...";
 
-            // Convert visual coords (top-left) to real data coords
             const realX = box.x / canvasScale;
             const realY = box.y / canvasScale;
             const realW = box.w / canvasScale;
@@ -388,46 +402,38 @@
 
             try {
                 if (currentFileType === 'pdf') {
-                    // --- PDF EXPORT ---
                     const pdfDoc = await PDFLib.PDFDocument.load(fileData);
                     const pages = pdfDoc.getPages();
                     
-                    // Color Math
                     const hex = colorPicker.value;
                     const r = parseInt(hex.slice(1, 3), 16) / 255;
                     const g = parseInt(hex.slice(3, 5), 16) / 255;
                     const b = parseInt(hex.slice(5, 7), 16) / 255;
                     const pdfColor = PDFLib.rgb(r, g, b);
 
-                    // PDF Coordinate Flip (Y starts at bottom)
-                    // The center of rotation logic for PDF-Lib is slightly different.
-                    // We must calculate the center point to rotate around.
                     const centerX = realX + (realW / 2);
                     const visualCenterY = realY + (realH / 2);
                     const pdfCenterY = originalHeight - visualCenterY;
 
                     pages.forEach(page => {
-                        // 1. Draw Main Rectangle
                         page.drawRectangle({
                             x: centerX - (realW / 2),
                             y: pdfCenterY - (realH / 2),
                             width: realW,
                             height: realH,
                             color: pdfColor,
-                            rotate: PDFLib.degrees(-rotation), // PDF rotation is counter-clockwise usually
+                            rotate: PDFLib.degrees(-rotation), 
                         });
 
-                        // 2. Simulated Feathering for PDF (Optional)
-                        // PDFs can't do true blur easily. We draw a stroke with opacity if requested.
                         if (isFeather) {
                             page.drawRectangle({
-                                x: centerX - (realW / 2) - 2, // Slight offset
+                                x: centerX - (realW / 2) - 2,
                                 y: pdfCenterY - (realH / 2) - 2,
                                 width: realW + 4,
                                 height: realH + 4,
                                 borderColor: pdfColor,
                                 borderWidth: 4,
-                                opacity: 0.3, // Semi-transparent border
+                                opacity: 0.3, 
                                 rotate: PDFLib.degrees(-rotation),
                             });
                         }
@@ -437,46 +443,35 @@
                     download(pdfBytes, "patched_doc.pdf", 'application/pdf');
 
                 } else if (currentFileType === 'image') {
-                    // --- IMAGE EXPORT ---
                     const tempCanvas = document.createElement('canvas');
                     tempCanvas.width = originalWidth;
                     tempCanvas.height = originalHeight;
                     const tCtx = tempCanvas.getContext('2d');
 
-                    // 1. Draw Original Image
                     tCtx.drawImage(fileData, 0, 0);
-
-                    // 2. Setup Rotation Context
                     tCtx.save();
                     
-                    // Move to center of box
                     const cx = realX + realW/2;
                     const cy = realY + realH/2;
                     tCtx.translate(cx, cy);
                     tCtx.rotate(rotation * Math.PI / 180);
 
-                    // 3. Apply Style (Color & Feather)
                     tCtx.fillStyle = colorPicker.value;
                     
                     if (isFeather) {
-                        // High quality gaussian blur simulation using shadow
                         tCtx.shadowColor = colorPicker.value;
-                        tCtx.shadowBlur = 20; // Strong blur
+                        tCtx.shadowBlur = 20; 
                     } else {
                         tCtx.shadowBlur = 0;
                     }
 
-                    // 4. Draw Rect (Centered at 0,0 because of translation)
                     tCtx.fillRect(-realW/2, -realH/2, realW, realH);
-                    
                     tCtx.restore();
 
-                    // 5. Export Logic (Quality Preservation)
                     let mime = uploadedFileMimeType;
                     if (mime !== 'image/jpeg' && mime !== 'image/png') mime = 'image/png';
                     const ext = mime === 'image/jpeg' ? 'jpg' : 'png';
 
-                    // Force 1.0 Quality
                     tempCanvas.toBlob((blob) => {
                         download(blob, `patched_image.${ext}`, mime);
                     }, mime, 1.0); 
