@@ -3,214 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visual PDF Watermark Remover</title>
+    <title>Mobile PDF Watermark Hider</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     
     <script>
-        // Set worker for PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
 
     <style>
-        #canvas-container {
+        /* Container for the image and the mask box */
+        #canvas-wrapper {
             position: relative;
             display: inline-block;
-            border: 2px dashed #ccc;
-            overflow: hidden;
-            cursor: crosshair;
+            border: 1px solid #ddd;
+            overflow: hidden; 
+            touch-action: none; /* Prevents scrolling while touching the canvas area */
         }
-        canvas {
-            display: block;
-        }
-        /* The red box that appears when you drag */
-        #selection-box {
-            border: 2px solid red;
-            background-color: rgba(255, 0, 0, 0.2);
+        
+        /* The Red Mask Box */
+        #mask-box {
             position: absolute;
-            display: none;
-            pointer-events: none; /* Let clicks pass through to canvas */
+            background-color: rgba(255, 0, 0, 0.4); /* See-through red */
+            border: 2px solid red;
+            box-sizing: border-box;
+            z-index: 10;
         }
+
+        /* Prevent button text selection */
+        button { user-select: none; }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen p-8 font-sans">
+<body class="bg-gray-100 font-sans pb-20">
 
-    <div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-xl">
-        <h1 class="text-3xl font-bold mb-2 text-slate-800">Visual Watermark Remover</h1>
-        <p class="text-slate-600 mb-6">1. Upload PDF &rarr; 2. Draw a box over the watermark on the preview &rarr; 3. Download.</p>
+    <div class="bg-white p-4 shadow mb-4 sticky top-0 z-20">
+        <h1 class="text-lg font-bold text-gray-800">PDF Mask (Mobile)</h1>
+    </div>
 
-        <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-            <input type="file" id="pdfInput" accept="application/pdf" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"/>
+    <div class="px-4 max-w-md mx-auto">
+        
+        <div class="mb-4">
+            <label class="block text-sm font-bold mb-2 text-gray-700">1. Upload PDF</label>
+            <input type="file" id="pdfInput" accept="application/pdf" class="block w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white"/>
         </div>
 
         <div id="editor-area" class="hidden">
-            <h2 class="font-bold text-lg mb-2">Draw a box over the watermark:</h2>
+            <p class="text-xs text-gray-500 mb-2">Use controls below to cover the watermark.</p>
             
-            <div id="canvas-container">
-                <canvas id="pdf-render"></canvas>
-                <div id="selection-box"></div>
+            <div class="flex justify-center">
+                <div id="canvas-wrapper">
+                    <canvas id="pdf-render"></canvas>
+                    <div id="mask-box" style="left: 50px; top: 50px; width: 100px; height: 30px;"></div>
+                </div>
             </div>
 
-            <div class="mt-6 flex items-center gap-4">
-                <button onclick="processPDF()" class="bg-green-600 text-white px-8 py-3 rounded shadow hover:bg-green-700 font-bold transition">
-                    Remove Watermark (Apply to All Pages)
+            <div class="mt-6 bg-white p-4 rounded-lg shadow space-y-4">
+                
+                <div>
+                    <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Move Position</p>
+                    <div class="grid grid-cols-3 gap-2 max-w-[200px] mx-auto">
+                        <div></div>
+                        <button onclick="moveBox(0, -5)" class="bg-gray-200 active:bg-blue-200 p-3 rounded font-bold">↑</button>
+                        <div></div>
+                        
+                        <button onclick="moveBox(-5, 0)" class="bg-gray-200 active:bg-blue-200 p-3 rounded font-bold">←</button>
+                        <div class="flex items-center justify-center text-gray-400">●</div>
+                        <button onclick="moveBox(5, 0)" class="bg-gray-200 active:bg-blue-200 p-3 rounded font-bold">→</button>
+
+                        <div></div>
+                        <button onclick="moveBox(0, 5)" class="bg-gray-200 active:bg-blue-200 p-3 rounded font-bold">↓</button>
+                        <div></div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div>
+                    <p class="text-center text-xs font-bold text-gray-400 mb-2 uppercase">Adjust Size</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-2">
+                            <span class="text-xs text-center">Width</span>
+                            <div class="flex gap-1">
+                                <button onclick="resizeBox(-5, 0)" class="bg-gray-200 active:bg-blue-200 py-3 flex-1 rounded font-bold">-</button>
+                                <button onclick="resizeBox(5, 0)" class="bg-gray-200 active:bg-blue-200 py-3 flex-1 rounded font-bold">+</button>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <span class="text-xs text-center">Height</span>
+                            <div class="flex gap-1">
+                                <button onclick="resizeBox(0, -5)" class="bg-gray-200 active:bg-blue-200 py-3 flex-1 rounded font-bold">-</button>
+                                <button onclick="resizeBox(0, 5)" class="bg-gray-200 active:bg-blue-200 py-3 flex-1 rounded font-bold">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="processPDF()" class="w-full bg-green-600 text-white text-lg font-bold py-4 rounded-lg shadow mt-4 active:bg-green-800">
+                    Apply & Download
                 </button>
-                <span id="status" class="text-sm font-semibold text-slate-500"></span>
+                <p id="status" class="text-center text-sm text-gray-500 mt-2"></p>
             </div>
         </div>
     </div>
 
     <script>
-        let pdfDoc = null;       // The loaded pdf-lib document
-        let pdfData = null;      // The raw array buffer
-        let pdfPageWidth = 0;    // Actual PDF width
-        let pdfPageHeight = 0;   // Actual PDF height
-        let canvasScale = 1.0;   // Scale factor of the canvas rendering
+        let pdfDoc = null;
+        let pdfData = null;
+        let pdfPageWidth = 0;
+        let pdfPageHeight = 0;
+        let canvasScale = 1.0;
 
-        // Selection coordinates (screen pixels)
-        let rect = { startX: 0, startY: 0, w: 0, h: 0 };
-        let isDragging = false;
+        // Current state of the box (pixels relative to canvas)
+        let box = { x: 20, y: 20, w: 100, h: 40 };
 
         const fileInput = document.getElementById('pdfInput');
         const editorArea = document.getElementById('editor-area');
         const canvas = document.getElementById('pdf-render');
         const ctx = canvas.getContext('2d');
-        const selectionBox = document.getElementById('selection-box');
-        const container = document.getElementById('canvas-container');
+        const maskBox = document.getElementById('mask-box');
 
-        // 1. Handle File Upload
+        // --- 1. HANDLE UPLOAD ---
         fileInput.addEventListener('change', async (e) => {
             if (e.target.files.length === 0) return;
-            
             const file = e.target.files[0];
             pdfData = await file.arrayBuffer();
 
-            // Render first page with PDF.js
             const loadingTask = pdfjsLib.getDocument({ data: pdfData });
             const pdf = await loadingTask.promise;
             const page = await pdf.getPage(1);
 
-            // Calculate scale to fit width of container (max 800px approx)
+            // Scale logic: Fit to screen width (minus padding)
             const viewportRaw = page.getViewport({ scale: 1 });
-            const desiredWidth = Math.min(800, window.innerWidth - 100);
-            canvasScale = desiredWidth / viewportRaw.width;
+            const screenWidth = window.innerWidth - 40; // 20px padding each side
+            canvasScale = screenWidth / viewportRaw.width;
             
+            // If scale is weirdly huge (small PDF), cap it
+            if (canvasScale > 2) canvasScale = 2;
+
             const viewport = page.getViewport({ scale: canvasScale });
 
-            // Set canvas dimensions
             canvas.width = viewport.width;
             canvas.height = viewport.height;
-            
-            // Store actual PDF dimensions for later math
             pdfPageWidth = viewportRaw.width;
             pdfPageHeight = viewportRaw.height;
 
-            // Render
-            const renderContext = {
-                canvasContext: ctx,
-                viewport: viewport
-            };
+            const renderContext = { canvasContext: ctx, viewport: viewport };
             await page.render(renderContext).promise;
             
+            // Initialize Box Position (Center it roughly)
+            box.x = (viewport.width / 2) - 50;
+            box.y = (viewport.height / 2) - 20;
+            updateBoxVisual();
+
             editorArea.classList.remove('hidden');
         });
 
-        // 2. Handle Mouse Drawing (The "Box")
-        container.addEventListener('mousedown', (e) => {
-            const rectBounds = container.getBoundingClientRect();
-            rect.startX = e.clientX - rectBounds.left;
-            rect.startY = e.clientY - rectBounds.top;
-            isDragging = true;
-            
-            // Reset box
-            selectionBox.style.width = '0px';
-            selectionBox.style.height = '0px';
-            selectionBox.style.display = 'block';
-        });
+        // --- 2. CONTROL FUNCTIONS ---
+        
+        // Multiplier allows moving faster if you want to add a "Fast" toggle later
+        const step = 5; 
 
-        container.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            
-            const rectBounds = container.getBoundingClientRect();
-            const currentX = e.clientX - rectBounds.left;
-            const currentY = e.clientY - rectBounds.top;
+        function moveBox(dx, dy) {
+            box.x += dx * 2; // Move by 10px increments usually
+            box.y += dy * 2;
+            updateBoxVisual();
+        }
 
-            rect.w = currentX - rect.startX;
-            rect.h = currentY - rect.startY;
+        function resizeBox(dw, dh) {
+            box.w += dw * 2;
+            box.h += dh * 2;
+            // Prevent negative size
+            if (box.w < 10) box.w = 10;
+            if (box.h < 10) box.h = 10;
+            updateBoxVisual();
+        }
 
-            // Update visual box
-            selectionBox.style.left = (rect.w > 0 ? rect.startX : currentX) + 'px';
-            selectionBox.style.top = (rect.h > 0 ? rect.startY : currentY) + 'px';
-            selectionBox.style.width = Math.abs(rect.w) + 'px';
-            selectionBox.style.height = Math.abs(rect.h) + 'px';
-        });
+        function updateBoxVisual() {
+            maskBox.style.left = box.x + 'px';
+            maskBox.style.top = box.y + 'px';
+            maskBox.style.width = box.w + 'px';
+            maskBox.style.height = box.h + 'px';
+        }
 
-        container.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-
-        // 3. Process the PDF (Apply mask to all pages)
+        // --- 3. PROCESS & DOWNLOAD ---
         async function processPDF() {
             if (!pdfData) return;
             const status = document.getElementById('status');
-            
-            // Validate selection
-            if (rect.w === 0 || rect.h === 0) {
-                alert("Please draw a box over the watermark first!");
-                return;
-            }
+            status.innerText = "Processing...";
 
             try {
-                status.innerText = "Processing...";
-
-                // Load document into pdf-lib
                 const pdfDoc = await PDFLib.PDFDocument.load(pdfData);
                 const pages = pdfDoc.getPages();
 
-                // --- COORDINATE MATH ---
-                // We must convert "Screen Pixels" (top-left origin) 
-                // to "PDF Points" (bottom-left origin).
+                // Convert Screen Pixels -> PDF Points
+                // 1. Scale back to original PDF size
+                const pdfX = box.x / canvasScale;
+                const pdfW = box.w / canvasScale;
+                const pdfH = box.h / canvasScale;
+                
+                // 2. Y-Axis flip (Web Top-Left -> PDF Bottom-Left)
+                const visualYOnPdf = box.y / canvasScale;
+                const finalY = pdfPageHeight - (visualYOnPdf + pdfH);
 
-                // 1. Normalize selection (handle dragging backwards)
-                const selX = rect.w > 0 ? rect.startX : rect.startX + rect.w;
-                const selY = rect.h > 0 ? rect.startY : rect.startY + rect.h;
-                const selW = Math.abs(rect.w);
-                const selH = Math.abs(rect.h);
-
-                // 2. Scale back to original PDF size
-                const pdfX = selX / canvasScale;
-                // PDF Y starts from bottom, so we subtract from height
-                // The visual Y (top-down) needs to be converted to bottom-up
-                const pdfY_visual = selY / canvasScale; 
-                const pdfH = selH / canvasScale;
-                const pdfW = selW / canvasScale;
-
-                // Important: In PDF-lib, Y is distance from the BOTTOM.
-                // So Y = PageHeight - (VisualY + VisualHeight)
-                const finalY = pdfPageHeight - (pdfY_visual + pdfH);
-
-                // Apply to ALL pages
                 pages.forEach(page => {
                     page.drawRectangle({
                         x: pdfX,
                         y: finalY,
                         width: pdfW,
                         height: pdfH,
-                        color: PDFLib.rgb(1, 1, 1), // White
+                        color: PDFLib.rgb(1, 1, 1),
                         opacity: 1,
                     });
                 });
 
-                // Download
                 const pdfBytes = await pdfDoc.save();
-                download(pdfBytes, "cleaned_file.pdf");
-                status.innerText = "Done!";
+                download(pdfBytes, "clean_mobile.pdf");
+                status.innerText = "Done! Downloading...";
 
             } catch (err) {
                 console.error(err);
-                status.innerText = "Error!";
-                alert("Something went wrong. See console.");
+                status.innerText = "Error.";
+                alert("An error occurred.");
             }
         }
 
